@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Category>;
+﻿@model List<BulkyBookWeb.Models.Category>;
 @{
 	ViewData["Title"] = "Category";
 }
@@ -43,7 +43,7 @@
 					@obj.DisplayOrder
 				</td>
 				<td with=50%>
-					@obj.CreatedDateTime
+					@obj.DateTimeNow
 				</td>
 				<td>
 					<div class="w-75 btn grouping" role="group">
