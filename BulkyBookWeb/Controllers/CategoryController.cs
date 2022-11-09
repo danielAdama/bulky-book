@@ -1,6 +1,7 @@
 ﻿using BulkyBookWeb.Data;
 using BulkyBookWeb.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace BulkyBookWeb.Controllers
 {
@@ -13,10 +14,12 @@ namespace BulkyBookWeb.Controllers
 			_context = context;
 		}
 
-		public IActionResult Index()
+		public async Task<IActionResult> Index(CancellationToken cancellationToken)
 		{
 			//var objCategoryList = _dbContext.Categories.ToList();
-			List<Category> objCategoryList = _context.Categories.ToList();
+			// AsNoTracking() is only used when performing Read operation, but is not used when we are doing
+			// CUD-(Create, Update and Delete)
+			List<Category> objCategoryList = await _context.Categories.AsNoTracking().ToListAsync(cancellationToken);
 			return View(objCategoryList);
 		}
 		public ViewResult Create()
@@ -25,7 +28,7 @@ namespace BulkyBookWeb.Controllers
 		}
 		// Create
 		[HttpPost]
-		public IActionResult Create(Category book)
+		public async Task<IActionResult> Create(Category book, CancellationToken cancellationToken=default)
 		{
 			if (book.Name == book.DisplayOrder.ToString())
 			{
@@ -36,21 +39,21 @@ namespace BulkyBookWeb.Controllers
 			// data is stored in the database, as name is a required field.
 			if (ModelState.IsValid)
 			{
-				_context.Categories.Add(book);
-				_context.SaveChanges();
+				await _context.Categories.AddAsync(book, cancellationToken);
+				await _context.SaveChangesAsync(cancellationToken);
 				TempData["Success"] = "Category created successfully";
 				return RedirectToAction("Index");
 			}
 			return View(book);
 		}
 		// Edit
-		public IActionResult Edit(int? id)
+		public async Task <IActionResult> Edit(long? id)
 		{
 			if (id == null || id == 0)
 			{
 				return NotFound();
 			}
-			var categoryFromDb = _context.Categories.Find(id);
+			var categoryFromDb = await _context.Categories.FindAsync(id);
 
 			if (categoryFromDb == null)
 			{
@@ -60,7 +63,7 @@ namespace BulkyBookWeb.Controllers
 		}
 		// Edit to Update
 		[HttpPost]
-		public IActionResult Edit(Category book)
+		public async Task<IActionResult> Edit(Category book, CancellationToken cancellationToken=default)
 		{
 			if (book.Name == book.DisplayOrder.ToString())
 			{
@@ -69,20 +72,20 @@ namespace BulkyBookWeb.Controllers
 			if (ModelState.IsValid)
 			{
 				_context.Categories.Update(book);
-				_context.SaveChanges();
+				await _context.SaveChangesAsync(cancellationToken);
 				TempData["Success"] = "Category updated successfully";
 				return RedirectToAction("Index");
 			}
 			return View(book);
 		}
 		// Detlete
-		public IActionResult Delete(int? id)
+		public async Task<IActionResult> Delete(long? id)
 		{
 			if (id == null || id == 0)
 			{
 				return NotFound();
 			}
-			var categoryFromDb = _context.Categories.Find(id);
+			var categoryFromDb = await _context.Categories.FindAsync(id);
 
 			if (categoryFromDb == null)
 			{
@@ -91,15 +94,15 @@ namespace BulkyBookWeb.Controllers
 			return View(categoryFromDb);
 		}
 		[HttpPost]
-		public IActionResult DeletePOST(int? id)
+		public async Task<IActionResult> DeletePOST(long? id, CancellationToken cancellationToken)
 		{
-			var book = _context.Categories.Find(id);
+			var book = await _context.Categories.FindAsync(id);
 			if (book == null)
 			{
 				return NotFound();
 			}
 			_context.Categories.Remove(book);
-			_context.SaveChanges();
+			await _context.SaveChangesAsync(cancellationToken);
 			TempData["Success"] = "Category deleted successfully";
 			return RedirectToAction("Index");
 		}

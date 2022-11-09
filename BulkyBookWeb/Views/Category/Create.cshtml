@@ -1,4 +1,7 @@
 ﻿@model BulkyBookWeb.Models.Category
+@{
+	ViewData["Title"] = "Create";
+}
 
 <form method="post">
 	<div class="border p-3 mt-4">
@@ -16,6 +19,26 @@
 			<label asp-for="DisplayOrder"></label>
 			<input asp-for="DisplayOrder" class="form-control" />
 			<span asp-validation-for="DisplayOrder" class="text-danger"></span>
+		</div>
+		<div class="mb-3">
+			<label asp-for="Genre"></label>
+			<input asp-for="Genre" class="form-control" />
+			<span asp-validation-for="Genre" class="text-danger"></span>
+		</div>
+		<div class="mb-3">
+			<label asp-for="ISBN"></label>
+			<input asp-for="ISBN" class="form-control" />
+			<span asp-validation-for="ISBN" class="text-danger"></span>
+		</div>
+		<div class="mb-3">
+			<label asp-for="Author"></label>
+			<input asp-for="Author" class="form-control" />
+			<span asp-validation-for="Author" class="text-danger"></span>
+		</div>
+		<div class="mb-3">
+			<label asp-for="Publisher"></label>
+			<input asp-for="Publisher" class="form-control" />
+			<span asp-validation-for="Publisher" class="text-danger"></span>
 		</div>
 		<button type="submit" class="btn btn-primary" style="width:150px">Create</button>
 		<a asp-controller="Category" asp-action="Index" class="btn btn-secondary">Back to List</a>
