@@ -1,5 +1,7 @@
 ﻿@model BulkyBookWeb.Models.Category
-
+@{
+	ViewData["Title"] = "Delete";
+}
 <form method="post" asp-action="DeletePOST">
 	<input asp-for="Id" hidden />
 	<div class="border p-3 mt-4">
@@ -13,7 +15,27 @@
 		</div>
 		<div class="mb-3">
 			<label asp-for="DisplayOrder"></label>
-			<input asp-for="DisplayOrder" disabled class="form-control" />
+			<input asp-for="DisplayOrder" disabled class="form-control"/>
+		</div>
+		<div class="mb-3">
+			<label asp-for="Genre"></label>
+			<input asp-for="Genre" disabled class="form-control"/>
+		</div>
+		<div class="mb-3">
+			<label asp-for="ISBN"></label>
+			<input asp-for="ISBN" disabled class="form-control"/>
+		</div>
+		<div class="mb-3">
+			<label asp-for="Author"></label>
+			<input asp-for="Author" disabled class="form-control"/>
+		</div>
+		<div class="mb-3">
+			<label asp-for="Publisher"></label>
+			<input asp-for="Publisher" disabled class="form-control"/>
+		</div>
+		<div class="mb-3">
+			<label asp-for="DateTimeNow"></label>
+			<input asp-for="DateTimeNow" disabled class="form-control"/>
 		</div>
 		<button type="submit" class="btn btn-danger" style="width:150px">Delete</button>
 		<a asp-controller="Category" asp-action="Index" class="btn btn-secondary">Back to List</a>
