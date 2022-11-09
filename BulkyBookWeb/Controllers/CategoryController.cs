@@ -47,13 +47,13 @@ namespace BulkyBookWeb.Controllers
 			return View(book);
 		}
 		// Edit
-		public IActionResult Edit(int? id)
+		public async Task <IActionResult> Edit(long? id)
 		{
 			if (id == null || id == 0)
 			{
 				return NotFound();
 			}
-			var categoryFromDb = _context.Categories.Find(id);
+			var categoryFromDb = await _context.Categories.FindAsync(id);
 
 			if (categoryFromDb == null)
 			{
@@ -79,13 +79,13 @@ namespace BulkyBookWeb.Controllers
 			return View(book);
 		}
 		// Detlete
-		public IActionResult Delete(int? id)
+		public async Task<IActionResult> Delete(long? id)
 		{
 			if (id == null || id == 0)
 			{
 				return NotFound();
 			}
-			var categoryFromDb = _context.Categories.Find(id);
+			var categoryFromDb = await _context.Categories.FindAsync(id);
 
 			if (categoryFromDb == null)
 			{
@@ -94,9 +94,9 @@ namespace BulkyBookWeb.Controllers
 			return View(categoryFromDb);
 		}
 		[HttpPost]
-		public async Task<IActionResult> DeletePOST(int? id, CancellationToken cancellationToken)
+		public async Task<IActionResult> DeletePOST(long? id, CancellationToken cancellationToken)
 		{
-			var book = _context.Categories.Find(id);
+			var book = await _context.Categories.FindAsync(id);
 			if (book == null)
 			{
 				return NotFound();
