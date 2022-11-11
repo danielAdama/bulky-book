@@ -2,6 +2,7 @@
 using BulkyBookWeb.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace BulkyBookWeb.Controllers
 {
@@ -12,6 +13,7 @@ namespace BulkyBookWeb.Controllers
 		public CategoryController(ApplicationDbContext context)
 		{
 			_context = context;
+			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 		}
 
 		public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -53,7 +55,7 @@ namespace BulkyBookWeb.Controllers
 			{
 				return NotFound();
 			}
-			var categoryFromDb = await _context.Categories.FindAsync(id, cancellationToken);
+			var categoryFromDb = await _context.Categories.FindAsync(id);
 
 			if (categoryFromDb == null)
 			{
@@ -85,7 +87,7 @@ namespace BulkyBookWeb.Controllers
 			{
 				return NotFound();
 			}
-			var categoryFromDb = await _context.Categories.FindAsync(id, cancellationToken);
+			var categoryFromDb = await _context.Categories.FindAsync(id);
 
 			if (categoryFromDb == null)
 			{
