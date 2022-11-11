@@ -47,7 +47,7 @@ namespace BulkyBookWeb.Controllers
 			return View(book);
 		}
 		// Edit
-		public async Task <IActionResult> Edit(long? id)
+		public async Task <IActionResult> Edit(long? id, CancellationToken = default)
 		{
 			if (id == null || id == 0)
 			{
@@ -79,7 +79,7 @@ namespace BulkyBookWeb.Controllers
 			return View(book);
 		}
 		// Detlete
-		public async Task<IActionResult> Delete(long? id)
+		public async Task<IActionResult> Delete(long? id, CancellationToken = default)
 		{
 			if (id == null || id == 0)
 			{
@@ -94,7 +94,7 @@ namespace BulkyBookWeb.Controllers
 			return View(categoryFromDb);
 		}
 		[HttpPost]
-		public async Task<IActionResult> DeletePOST(long? id, CancellationToken cancellationToken)
+		public async Task<IActionResult> DeletePOST(long? id, CancellationToken cancellationToken = default)
 		{
 			var book = await _context.Categories.FindAsync(id);
 			if (book == null)
