@@ -47,13 +47,13 @@ namespace BulkyBookWeb.Controllers
 			return View(book);
 		}
 		// Edit
-		public async Task <IActionResult> Edit(long? id, CancellationToken = default)
+		public async Task <IActionResult> Edit(long? id, CancellationToken cancellationToken = default)
 		{
 			if (id == null || id == 0)
 			{
 				return NotFound();
 			}
-			var categoryFromDb = await _context.Categories.FindAsync(id);
+			var categoryFromDb = await _context.Categories.FindAsync(id, cancellationToken);
 
 			if (categoryFromDb == null)
 			{
@@ -79,13 +79,13 @@ namespace BulkyBookWeb.Controllers
 			return View(book);
 		}
 		// Detlete
-		public async Task<IActionResult> Delete(long? id, CancellationToken = default)
+		public async Task<IActionResult> Delete(long? id, CancellationToken cancellationToken = default)
 		{
 			if (id == null || id == 0)
 			{
 				return NotFound();
 			}
-			var categoryFromDb = await _context.Categories.FindAsync(id);
+			var categoryFromDb = await _context.Categories.FindAsync(id, cancellationToken);
 
 			if (categoryFromDb == null)
 			{
