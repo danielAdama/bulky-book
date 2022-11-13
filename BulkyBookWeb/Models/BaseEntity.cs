@@ -6,7 +6,7 @@ namespace BulkyBookWeb.Models
 	{
         [Key]
         public long Id { get; set; }
-        public DateTime TimeCreated { get; set; }
-        public DateTime TimeUpdated { get; set; }
-    }
+        public DateTime TimeCreated { get; set; } = DateTime.Now;
+		public DateTime TimeUpdated { get; set; }
+	}
 }
