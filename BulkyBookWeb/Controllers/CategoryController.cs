@@ -51,7 +51,7 @@ namespace BulkyBookWeb.Controllers
 		// Edit
 		public async Task<IActionResult> Edit(long id)
 		{
-			var categoryFromDb = await _categoryRepository.GetIdAsync(id);
+			Category categoryFromDb = await _categoryRepository.GetIdAsync(id);
 
 			if (categoryFromDb == null)
 			{
