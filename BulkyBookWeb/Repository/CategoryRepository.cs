@@ -36,6 +36,11 @@ namespace BulkyBookWeb.Repository
 			return await _context.Categories.FindAsync(id);
 		}
 
+		public async Task<int> GetCountAsync()
+		{
+			return await _context.Categories.CountAsync();
+		}
+
 		public bool Save()
 		{
 			var saved = _context.SaveChanges();
