@@ -1,10 +1,76 @@
-﻿@{
+﻿@model List<BulkyBookWeb.Models.Library>;
+
+@{
     ViewData["Title"] = "Home";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>
-        Start to work on the excel upload.<a href="https://docs.microsoft.com/aspnet/core"></a>Build a book tracking system that tracks book that have been given out to customers and need to be returned with a certain time, those books loaned out should be tracked against the ones that are available. 3 tables, one should store avaibles book, 2nd should compard the returned books with the available books to know the ones borrowed by a individual customers.
-    </p>
+<div class="container p-3">
+	<div class="row pt-4">
+		<div class="col-6 text-start">
+			<h1 class="text-primary">Book Library</h1>
+		</div>
+	</div>
+	<br />
 </div>
+
+<table class="table table-bordered table-striped" style="width:100%">
+	<thead>
+		<tr>
+			<th>
+				ID
+			</th>
+			<th>
+				Category Name
+			</th>
+			<th>
+				Display Order
+			</th>
+			<th>
+				Genre
+			</th>
+			<th>
+				ISBN
+			</th>
+			<th>
+				Author
+			</th>
+			<th>
+				Publisher
+			</th>
+			<th>
+				Date and Time
+			</th>
+		</tr>
+	</thead>
+	<tbody>
+		@foreach (Library obj in Model)
+		{
+			<tr>
+				<td with=5%>
+					@obj.UserId
+				</td>
+				<td with=5%>
+					@obj.Name
+				</td>
+				<td with=5%>
+					@obj.DisplayOrder
+				</td>
+				<td with=5%>
+					@obj.Genre
+				</td>
+				<td with=5%>
+					@obj.ISBN
+				</td>
+				<td with=5%>
+					@obj.Author
+				</td>
+				<td with=5%>
+					@obj.Publisher
+				</td>
+				<td with=5%>
+					@obj.DateTimeNow
+				</td>
+			</tr>
+		}
+	</tbody>
+</table>
