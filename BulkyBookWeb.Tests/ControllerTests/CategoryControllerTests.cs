@@ -30,7 +30,7 @@ namespace BulkyBookWeb.Tests.ControllerTests
 		}
 
 		[Fact]
-		public void Test_CategoryController_Index_Returns_Type()
+		public void Test_CategoryController_Index_Returns_IActionResultType()
 		{
 			// Arrange - What do i need to bring in?
 			var objCategoryList = A.Fake<List<Category>>();
@@ -52,7 +52,7 @@ namespace BulkyBookWeb.Tests.ControllerTests
 		}
 
 		[Fact]
-		public void Test_CategoryController_Edit_Returns_Type()
+		public void Test_CategoryController_Edit_Returns_IActionResult()
 		{
 			// Arrange
 			long id = 1;
@@ -64,7 +64,7 @@ namespace BulkyBookWeb.Tests.ControllerTests
 		}
 
 		[Fact]
-		public void Test_CategoryController_Delete_Returns_Type()
+		public void Test_CategoryController_Delete_Returns_IActionResult()
 		{
 			// Arrange
 			long id = 1;
