@@ -3,6 +3,7 @@ using BulkyBookWeb.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 
 namespace BulkyBookWeb.Controllers
@@ -23,7 +24,7 @@ namespace BulkyBookWeb.Controllers
 			return View(libraryList);
 		}
 		[HttpPost]
-		public IActionResult Index(IFormFile file)
+		public async Task<IActionResult> Index(IFormFile file)
 		{
 			var fileName = file.FileName.ToString().Split(".")[0];
 			var fileExt = file.FileName.ToString().Split(".")[1];
@@ -39,7 +40,15 @@ namespace BulkyBookWeb.Controllers
 				Directory.CreateDirectory(filepath);
 			}
 			string excelPath = $"{fileName}{Guid.NewGuid().ToString().ToLower().Replace("-", "")}.{fileExt}";
-			Console.WriteLine(excelPath);
+			if (file.Length > 0)
+			{
+				using (FileStream stream = new(excelPath, FileMode.CreateNew))
+				{
+					await file.CopyToAsync(stream);
+				}
+				//Console.WriteLine(stream);
+			}
+
 			return View();
 		}
 
