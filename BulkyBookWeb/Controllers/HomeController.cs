@@ -19,12 +19,27 @@ namespace BulkyBookWeb.Controllers
 
 		public async Task<IActionResult> Index()
 		{
-			List<Library> libraryList = await _context.Libraries.AsNoTracking().ToListAsync(); 
+			List<Library> libraryList = await _context.Libraries.AsNoTracking().ToListAsync();
 			return View(libraryList);
 		}
-
-		public IActionResult ExcelUpload()
+		[HttpPost]
+		public IActionResult Index(IFormFile file)
 		{
+			var fileName = file.FileName.ToString().Split(".")[0];
+			var fileExt = file.FileName.ToString().Split(".")[1];
+			var allowedExt = new string[] { "xlsx", "xls", "csv" };
+			if (!allowedExt.Contains(fileExt))
+			{
+				TempData["InvalidFile"] = "Invalid File Extension";
+				RedirectToAction("Index");
+			}
+			var filepath = Path.Combine(Directory.GetCurrentDirectory(), @"wwwroot\files");
+			if (!Directory.Exists(filepath))
+			{
+				Directory.CreateDirectory(filepath);
+			}
+			string excelPath = $"{fileName}{Guid.NewGuid().ToString().ToLower().Replace("-", "")}.{fileExt}";
+			Console.WriteLine(excelPath);
 			return View();
 		}
 
