@@ -1,4 +1,5 @@
-﻿@model List<BulkyBookWeb.Models.Library>;
+﻿@model BulkyBookWeb.ViewModels.DisplayBooksAndUploadFileViewModel;
+
 
 @{
     ViewData["Title"] = "Home";
@@ -7,7 +8,11 @@
 
 <div class="up">
 	@*<h1 class="text-center text-white bg-warning p-0">@TempData["ErrorMessage"] @TempData["invalidFile"] </h1>*@
-	<h1 class="text-center text-white bg-warning p-0"> @TempData["InvalidFile"] </h1>
+	@if (TempData["InvalidFile"] != null)
+	{
+		<h1 class="text-center text-white bg-warning p-0"> @TempData["InvalidFile"] </h1>
+	}
+	<h1 class="text-center text-white bg-success p-0">@TempData["ValidFile"]</h1>
 	<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
 		<div class="modal-dialog">
 			<div class="modal-content">
@@ -49,67 +54,70 @@
 	</div>
 </div>
 
-<table class="table table-bordered table-striped" style="width:100%">
-	<thead>
-		<tr>
-			<th>
-				ID
-			</th>
-			<th>
-				Category Name
-			</th>
-			<th>
-				Display Order
-			</th>
-			<th>
-				Genre
-			</th>
-			<th>
-				ISBN
-			</th>
-			<th>
-				Author
-			</th>
-			<th>
-				Publisher
-			</th>
-			<th>
-				Date and Time
-			</th>
-		</tr>
-	</thead>
-	<tbody>
-		@if (Model != null && Model.Count > 0)
-		{
-			@foreach (Library obj in Model)
+@if (Model.GetLibraries != null && Model.GetLibraries.Count > 0)
+{
+	<table class="table table-bordered table-striped" style="width:100%">
+		<thead>
+			<tr>
+				<th>
+					ID
+				</th>
+				<th>
+					Category Name
+				</th>
+				<th>
+					Display Order
+				</th>
+				<th>
+					Genre
+				</th>
+				<th>
+					ISBN
+				</th>
+				<th>
+					Author
+				</th>
+				<th>
+					Publisher
+				</th>
+				<th>
+					Date and Time
+				</th>
+			</tr>
+		</thead>
+		<tbody>
+			@if (Model.GetLibraries != null && Model.GetLibraries.Count > 0)
 			{
-				<tr>
-					<td with=5%>
-						@obj.UserId
-					</td>
-					<td with=5%>
-						@obj.Name
-					</td>
-					<td with=5%>
-						@obj.DisplayOrder
-					</td>
-					<td with=5%>
-						@obj.Genre
-					</td>
-					<td with=5%>
-						@obj.ISBN
-					</td>
-					<td with=5%>
-						@obj.Author
-					</td>
-					<td with=5%>
-						@obj.Publisher
-					</td>
-					<td with=5%>
-						@obj.DateTimeNow
-					</td>
-				</tr>
+				@foreach (Library obj in Model.GetLibraries)
+				{
+					<tr>
+						<td with=5%>
+							@obj.UserId
+						</td>
+						<td with=5%>
+							@obj.Name
+						</td>
+						<td with=5%>
+							@obj.DisplayOrder
+						</td>
+						<td with=5%>
+							@obj.Genre
+						</td>
+						<td with=5%>
+							@obj.ISBN
+						</td>
+						<td with=5%>
+							@obj.Author
+						</td>
+						<td with=5%>
+							@obj.Publisher
+						</td>
+						<td with=5%>
+							@obj.DateTimeNow
+						</td>
+					</tr>
+				}
 			}
-		}
-	</tbody>
-</table>
+		</tbody>
+	</table>
+}
