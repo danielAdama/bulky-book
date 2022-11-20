@@ -24,7 +24,10 @@
 	<thead class="thead-light">
 		<tr>
 			<th scope="col">
-				ID
+				Id
+			</th>
+			<th scope="col">
+				UID
 			</th>
 			<th scope="col">
 				Category Name
@@ -56,6 +59,9 @@
 			@foreach (Category obj in Model)
 			{
 				<tr>
+					<td with=5%>
+						@obj.Id
+					</td>
 					<td with=5%>
 						@obj.UserId
 					</td>

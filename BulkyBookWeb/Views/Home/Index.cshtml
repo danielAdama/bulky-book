@@ -59,28 +59,31 @@
 	<table class="table table-bordered table-striped" style="width:100%">
 		<thead>
 			<tr>
-				<th>
-					ID
+				<th scope="col">
+					S/N
 				</th>
-				<th>
+				<th scope="col">
+					UID
+				</th>
+				<th scope="col">
 					Category Name
 				</th>
-				<th>
+				<th scope="col">
 					Display Order
 				</th>
-				<th>
+				<th scope="col">
 					Genre
 				</th>
-				<th>
+				<th scope="col">
 					ISBN
 				</th>
-				<th>
+				<th scope="col">
 					Author
 				</th>
-				<th>
+				<th scope="col">
 					Publisher
 				</th>
-				<th>
+				<th scope="col">
 					Date and Time
 				</th>
 			</tr>
@@ -91,6 +94,9 @@
 				@foreach (Library obj in Model.GetLibraries)
 				{
 					<tr>
+						<td with=5%>
+							@obj.Id
+						</td>
 						<td with=5%>
 							@obj.UserId
 						</td>
