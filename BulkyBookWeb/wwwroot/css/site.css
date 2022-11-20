@@ -16,3 +16,15 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+.up {
+    margin-top:35px;
+}
+
+.up form button[type="submit"] {
+    margin-left:45px;
+}
+
+.category-table {
+    margin-top: 35px;
+}

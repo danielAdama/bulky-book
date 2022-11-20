@@ -3,83 +3,89 @@
 	ViewData["Title"] = "Category";
 }
 
-<div class="container p-3">
-	<div class="row pt-4">
-		<div class="col-6 text-start">
-			<h1 class="text-primary">Category List</h1>
-		</div>
-		<div class="col-6 text-end">
-			<a type="button" class="btn btn-primary" asp-controller="Category" asp-action="Create">
-				<i class="bi bi-plus-circle"></i>&nbsp; Create New Category
-			</a>
+<div class="category-table">
+	<div class="card shadow border-0 mb-7">
+		<div class="row align-items-center p-3 m-2">
+			<div class="col-12 mb-4 mb-sm-0 d-flex justify-content-between">
+				<div class="col-6 text-start">
+					<h1 class="text-primary">Category List</h1>
+				</div>
+				<div class="col-6 text-end">
+					<a type="button" class="btn btn-primary" asp-controller="Category" asp-action="Create">
+						<i class="bi bi-plus-circle"></i>&nbsp; Create New Category
+					</a>
+				</div>
+			</div>
 		</div>
 	</div>
-	<br />
-
 </div>
+
 <table class="table table-bordered table-striped" style="width:100%">
-	<thead>
+	<thead class="thead-light">
 		<tr>
-			<th>
+			<th scope="col">
 				ID
 			</th>
-			<th>
+			<th scope="col">
 				Category Name
-			</th>
-			<th>
+			</th scope="col">
+			<th scope="col">
 				Display Order
 			</th>
-			<th>
+			<th scope="col">
 				Genre
 			</th>
-			<th>
+			<th scope="col">
 				ISBN
 			</th>
-			<th>
+			<th scope="col">
 				Author
 			</th>
-			<th>
+			<th scope="col">
 				Publisher
 			</th>
-			<th>
+			<th scope="col">
 				Date and Time
 			</th>
 			<th></th>
 		</tr>
 	</thead>
 	<tbody>
-		@foreach (var obj in Model)
+		@if (Model != null && Model.Count > 0)
 		{
-			<tr>
-				<td with=5%>
-					@obj.UserId
-				</td>
-				<td with=5%>
-					@obj.Name
-				</td>
-				<td with=5%>
-					@obj.DisplayOrder
-				</td>
-				<td with=5%>
-					@obj.Genre
-				</td>
-				<td with=5%>
-					@obj.ISBN
-				</td>
-				<td with=5%>
-					@obj.Author
-				</td>
-				<td with=5%>
-					@obj.Publisher
-				</td>
-				<td with=5%>
-					@obj.DateTimeNow
-				</td>
-				<td>
-					<a asp-controller="Category" asp-action="Edit" asp-route-id="@obj.Id" class="btn btn-primary"><i class="bi bi-pen"></i>&nbsp;Edit</a>
-					<a asp-controller="Category" asp-action="Delete" asp-route-id="@obj.Id" class="btn btn-danger"><i class="bi bi-trash3-fill"></i>&nbsp;Delete</a>
-				</td>
-			</tr>
+			@foreach (Category obj in Model)
+			{
+				<tr>
+					<td with=5%>
+						@obj.UserId
+					</td>
+					<td with=5%>
+						@obj.Name
+					</td>
+					<td with=5%>
+						@obj.DisplayOrder
+					</td>
+					<td with=5%>
+						@obj.Genre
+					</td>
+					<td with=5%>
+						@obj.ISBN
+					</td>
+					<td with=5%>
+						@obj.Author
+					</td>
+					<td with=5%>
+						@obj.Publisher
+					</td>
+					<td with=5%>
+						@obj.DateTimeNow
+					</td>
+					<td>
+						<a asp-controller="Category" asp-action="Edit" asp-route-id="@obj.Id" class="btn btn-primary"><i class="bi bi-pen"></i>&nbsp;Edit</a>
+						<a asp-controller="Category" asp-action="Delete" asp-route-id="@obj.Id" class="btn btn-danger"><i class="bi bi-trash3-fill"></i>&nbsp;Delete</a>
+					</td>
+				</tr>
+			}
 		}
 	</tbody>
 </table>
