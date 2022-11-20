@@ -52,11 +52,13 @@ namespace BulkyBookWeb.Controllers
 					Directory.CreateDirectory(filePath);
 				}
 				string path = $"{filePath}\\{fileName}{Guid.NewGuid().ToString().ToLower().Replace("-", "")}.{fileExt}";
+
 				if (fileVM.File.Length > 0)
 				{
 					string syncRef = $"LBY-{Guid.NewGuid().ToString().ToLower().Replace("-", "")}";
 					long syncId = await CreateSyncId(syncRef, cancellationToken);
 					DataTable data = await GetExcelTable(path, fileVM, cancellationToken);
+					System.IO.File.Delete(path);
 
 					foreach (DataRow row in data.Rows)
 					{
@@ -107,7 +109,6 @@ namespace BulkyBookWeb.Controllers
 				}
 			}).Tables[0] ?? new System.Data.DataTable(); // Return the Excel (Left side) if it is not null otherwise return the right side
 			reader.Close();
-			System.IO.File.Delete(path);
 
 			return data;
 		}
