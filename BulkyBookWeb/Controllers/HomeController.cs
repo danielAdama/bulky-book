@@ -8,7 +8,9 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Transactions;
+using static System.Net.WebRequestMethods;
 
 namespace BulkyBookWeb.Controllers
 {
@@ -35,7 +37,7 @@ namespace BulkyBookWeb.Controllers
 		{
 			var fileName = fileVM.File.FileName.ToString().Split(".")[0];
 			var fileExt = fileVM.File.FileName.ToString().Split(".")[1];
-			var allowedExt = new string[] { "xlsx", "xls", "csv" };
+			var allowedExt = new string[] { "xlsx", "xls"};
 			if (!allowedExt.Contains(fileExt))
 			{
 				TempData["InvalidFile"] = "Invalid File Extension";
@@ -52,32 +54,15 @@ namespace BulkyBookWeb.Controllers
 				string path = $"{filePath}\\{fileName}{Guid.NewGuid().ToString().ToLower().Replace("-", "")}.{fileExt}";
 				if (fileVM.File.Length > 0)
 				{
-					using (FileStream stream = new(path, FileMode.Create))
-					{
-						await fileVM.File.CopyToAsync(stream, cancellationToken);
-					}
-					var fileStream = System.IO.File.Open(path, FileMode.Open, FileAccess.Read);
-					IExcelDataReader reader = ExcelReaderFactory.CreateReader(fileStream);
+					string syncRef = $"LBY-{Guid.NewGuid().ToString().ToLower().Replace("-", "")}";
+					long syncId = await CreateSyncId(syncRef, cancellationToken);
+					DataTable data = await GetExcelTable(path, fileVM, cancellationToken);
 
-					using var data = reader.AsDataSet(new ExcelDataSetConfiguration()
-					{
-						UseColumnDataType = true,
-						FilterSheet = (tableReader, sheetIndex) => true,
-						ConfigureDataTable = (tableReader) => new ExcelDataTableConfiguration
-						{
-							UseHeaderRow = true,
-							FilterRow = (rowReader) => true,
-							FilterColumn = (rowReader, columnIndex) => true,
-						}
-					}).Tables[0] ?? new System.Data.DataTable(); // Return the Excel (Left side) if it is not null otherwise return the right side
-					reader.Close();
-					System.IO.File.Delete(path);
-					
 					foreach (DataRow row in data.Rows)
 					{
 						SyncLog log = new SyncLog()
 						{
-							//LibSyncId = ,
+							LibSyncId = syncId,
 							UserId = row["UserId"].ToString(),
 							Name = row["Name"].ToString(),
 							DisplayOrder = Convert.ToInt32(row["DisplayOrder"]),
@@ -85,11 +70,13 @@ namespace BulkyBookWeb.Controllers
 							ISBN = row["ISBN"].ToString(),
 							Author = row["Author"].ToString(),
 							Publisher = row["Publisher"].ToString(),
-							TimeUpdated = DateTime.Now,
 
 						};
-						Console.WriteLine(row);
+						await _context.SyncLogs.AddAsync(log, cancellationToken);
+						await _context.SaveChangesAsync(cancellationToken);
 					}
+
+					// Compare data btw Libraries and SyncLogs table, if change is detected add it to the ChangesLog table
 					
 
 
@@ -97,6 +84,43 @@ namespace BulkyBookWeb.Controllers
 			}
 			fileVM.GetLibraries = await _context.Libraries.AsNoTracking().ToListAsync(cancellationToken);
 			return View(fileVM);
+		}
+
+		public async Task<DataTable> GetExcelTable(string path, DisplayBooksAndUploadFileViewModel file, CancellationToken cancellationToken)
+		{
+			using (FileStream stream = new(path, FileMode.Create))
+			{
+				await file.File.CopyToAsync(stream, cancellationToken);
+			}
+			var fileStream = System.IO.File.Open(path, FileMode.Open, FileAccess.Read);
+			IExcelDataReader reader = ExcelReaderFactory.CreateReader(fileStream);
+
+			using var data = reader.AsDataSet(new ExcelDataSetConfiguration()
+			{
+				UseColumnDataType = true,
+				FilterSheet = (tableReader, sheetIndex) => true,
+				ConfigureDataTable = (tableReader) => new ExcelDataTableConfiguration
+				{
+					UseHeaderRow = true,
+					FilterRow = (rowReader) => true,
+					FilterColumn = (rowReader, columnIndex) => true,
+				}
+			}).Tables[0] ?? new System.Data.DataTable(); // Return the Excel (Left side) if it is not null otherwise return the right side
+			reader.Close();
+			System.IO.File.Delete(path);
+
+			return data;
+		}
+
+		public async Task<long> CreateSyncId(string syncRef, CancellationToken cancellationToken = default)
+		{
+			Sync refId = new Sync
+			{
+				Reference = syncRef,
+			};
+			await _context.Syncs.AddAsync(refId, cancellationToken);
+			await _context.SaveChangesAsync(cancellationToken);
+			return refId.Id;
 		}
 
 		public IActionResult Privacy()
