@@ -14,7 +14,12 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Transactions;
+using CsvHelper;
+using System.Globalization;
 using static System.Net.WebRequestMethods;
+using CsvHelper.Configuration;
+using CsvHelper.Configuration.Attributes;
+
 
 namespace BulkyBookWeb.Controllers
 {
@@ -41,7 +46,7 @@ namespace BulkyBookWeb.Controllers
 		{
 			var fileName = fileVM.File.FileName.ToString().Split(".")[0];
 			var fileExt = fileVM.File.FileName.ToString().Split(".")[1];
-			var allowedExt = new string[] { "xlsx", "xls"};
+			var allowedExt = new string[] { "xlsx", "xls", "csv"};
 			if (!allowedExt.Contains(fileExt))
 			{
 				TempData["InvalidFile"] = "Invalid File Extension";
@@ -61,105 +66,138 @@ namespace BulkyBookWeb.Controllers
 				{
 					string syncRef = $"LBY-{Guid.NewGuid().ToString().ToLower().Replace("-", "")}";
 					long syncId = await CreateSyncId(syncRef, cancellationToken);
-					DataTable data = await GetExcelTable(path, fileVM, cancellationToken);
+					//DataTable data = await GetExcelTable(path, fileVM, cancellationToken);
+
+					using (FileStream stream = new(path, FileMode.Create))
+					{
+						await fileVM.File.CopyToAsync(stream, cancellationToken);
+					}
+
+					ConcurrentBag<SyncLog> syncLogBag = new ConcurrentBag<SyncLog>();
+
+					var fileStream = System.IO.File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+					using (var textReader = new StreamReader(fileStream, Encoding.UTF8))
+					{
+						using (var reader = new CsvReader(textReader, CultureInfo.InvariantCulture))
+						{
+							var records = reader.GetRecordsAsync<LibViewModel>(cancellationToken);
+
+							await foreach (LibViewModel row in records)
+							{
+								SyncLog syncLog = new SyncLog()
+								{
+									LibSyncId = syncId,
+									UserId = row.UserId,
+									Name = row.Name,
+									DisplayOrder = row.DisplayOrder,
+									Genre = row.Genre,
+									ISBN = row.ISBN,
+									Author = row.Author,
+									Publisher = row.Publisher,
+								};
+								syncLogBag.Add(syncLog);
+							}
+						}
+					}
+
 					System.IO.File.Delete(path);
 
 
-					using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken); // Track all operations
-					try
-					{
-						ConcurrentBag<SyncLog> syncLogBag = new ConcurrentBag<SyncLog>();
-						foreach (DataRow row in data.Rows)
-						{
-							SyncLog syncLog = new SyncLog()
-							{
-								LibSyncId = syncId,
-								UserId = row["UserId"].ToString(),
-								Name = row["Name"].ToString(),
-								DisplayOrder = Convert.ToInt32(row["DisplayOrder"]),
-								Genre = row["Genre"].ToString(),
-								ISBN = row["ISBN"].ToString(),
-								Author = row["Author"].ToString(),
-								Publisher = row["Publisher"].ToString(),
+					//using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken); // Track all operations
+					//try
+					//{
+					//	ConcurrentBag<SyncLog> syncLogBag = new ConcurrentBag<SyncLog>();
+					//	foreach (DataRow row in data.Rows)
+					//	{
+					//		SyncLog syncLog = new SyncLog()
+					//		{
+					//			LibSyncId = syncId,
+					//			UserId = row["UserId"].ToString(),
+					//			Name = row["Name"].ToString(),
+					//			DisplayOrder = Convert.ToInt32(row["DisplayOrder"]),
+					//			Genre = row["Genre"].ToString(),
+					//			ISBN = row["ISBN"].ToString(),
+					//			Author = row["Author"].ToString(),
+					//			Publisher = row["Publisher"].ToString(),
 
-							};
-							//await _context.SyncLogs.AddAsync(libraryLog, cancellationToken);
-							//await _context.SaveChangesAsync(cancellationToken);
-							// Store syncLog as concurrentbag so we can easily compare it with the librarybag
-							syncLogBag.Add(syncLog);
-						}
+					//		};
+					//		//await _context.SyncLogs.AddAsync(libraryLog, cancellationToken);
+					//		//await _context.SaveChangesAsync(cancellationToken);
+					//		// Store syncLog as concurrentbag so we can easily compare it with the librarybag
+					//		syncLogBag.Add(syncLog);
+					//	}
 
 
-						// Compare data btw Libraries(bag) and SyncLogs table (bag), if change is detected add it to the ChangesLog table
-						List<Library> libraryList = await _context.Libraries.ToListAsync(cancellationToken);
+					//	// Compare data btw Libraries(bag) and SyncLogs table (bag), if change is detected add it to the ChangesLog table
+					//	List<Library> libraryList = await _context.Libraries.ToListAsync(cancellationToken);
 
-						ConcurrentBag<Library> newLibrarybag = new ConcurrentBag<Library>();
-						ConcurrentBag<Library> updatedLibrarybag = new ConcurrentBag<Library>();
-						ConcurrentBag<ChangesLog> changesLibrarybag = new ConcurrentBag<ChangesLog>();
+					//	ConcurrentBag<Library> newLibrarybag = new ConcurrentBag<Library>();
+					//	ConcurrentBag<Library> updatedLibrarybag = new ConcurrentBag<Library>();
+					//	ConcurrentBag<ChangesLog> changesLibrarybag = new ConcurrentBag<ChangesLog>();
 
-						foreach (var log in syncLogBag)
-						{
-							var userLibraryData = libraryList.FirstOrDefault(x => x.UserId?.ToLower().Equals(log.UserId?.ToLower()) == true);
-							// If the userLibraryData is false means a new book is been stored otherwise check previous books
-							// for changes, when change is detected the system should flag that row of those values that changed.
-							if (null == userLibraryData) // false
-							{
-								newLibrarybag.Add(new Library
-								{
-									UserId = log.UserId,
-									Name = log.Name,
-									DisplayOrder = log.DisplayOrder,
-									Genre = log.Genre,
-									ISBN = log.ISBN,
-									Author = log.Author,
-									Publisher = log.Publisher,
-									TimeCreated = DateTime.Now,
-									TimeUpdated = DateTime.Now,
-								});
-							}
-							else // true
-							{
-								var libraryChanges = GetLibraryChanges(userLibraryData, log, out int numChanges);
+					//	foreach (var log in syncLogBag)
+					//	{
+					//		var userLibraryData = libraryList.FirstOrDefault(x => x.UserId?.ToLower().Equals(log.UserId?.ToLower()) == true);
+					//		// If the userLibraryData is false means a new book is been stored otherwise check previous books
+					//		// for changes, when change is detected the system should flag that row of those values that changed.
+					//		if (null == userLibraryData) // false
+					//		{
+					//			newLibrarybag.Add(new Library
+					//			{
+					//				UserId = log.UserId,
+					//				Name = log.Name,
+					//				DisplayOrder = log.DisplayOrder,
+					//				Genre = log.Genre,
+					//				ISBN = log.ISBN,
+					//				Author = log.Author,
+					//				Publisher = log.Publisher,
+					//				TimeCreated = DateTime.Now,
+					//				TimeUpdated = DateTime.Now,
+					//			});
+					//		}
+					//		else // true
+					//		{
+					//			var libraryChanges = GetLibraryChanges(userLibraryData, log, out int numChanges);
 
-								ChangesLog libChanges = new ChangesLog
-								{
-									Changes = JsonConvert.SerializeObject(libraryChanges),
-									refCode = syncRef,
-									RowAffected = numChanges,
-									SyncId = syncId,
-									TimeCreated = DateTime.Now,
-									TimeUpdated = DateTime.Now,
-									UserId = log.UserId,
-								};
+					//			ChangesLog libChanges = new ChangesLog
+					//			{
+					//				Changes = JsonConvert.SerializeObject(libraryChanges),
+					//				refCode = syncRef,
+					//				RowAffected = numChanges,
+					//				SyncId = syncId,
+					//				TimeCreated = DateTime.Now,
+					//				TimeUpdated = DateTime.Now,
+					//				UserId = log.UserId,
+					//			};
 
-								changesLibrarybag.Add(libChanges);
-								updatedLibrarybag.Add(userLibraryData);
+					//			changesLibrarybag.Add(libChanges);
+					//			updatedLibrarybag.Add(userLibraryData);
 
-							}
+					//		}
 
-						};
-						await _context.SyncLogs.AddRangeAsync(syncLogBag, cancellationToken);
-						await _context.ChangesLogs.AddRangeAsync(changesLibrarybag, cancellationToken);
+					//	};
+					//	await _context.SyncLogs.AddRangeAsync(syncLogBag, cancellationToken);
+					//	await _context.ChangesLogs.AddRangeAsync(changesLibrarybag, cancellationToken);
 
-						if (newLibrarybag.Any())
-						{
-							await _context.Libraries.AddRangeAsync(newLibrarybag, cancellationToken);
-						}
-						if (updatedLibrarybag.Any())
-						{
-							_context.Libraries.UpdateRange(updatedLibrarybag);
-						}
-						await _context.SaveChangesAsync();
+					//	if (newLibrarybag.Any())
+					//	{
+					//		await _context.Libraries.AddRangeAsync(newLibrarybag, cancellationToken);
+					//	}
+					//	if (updatedLibrarybag.Any())
+					//	{
+					//		_context.Libraries.UpdateRange(updatedLibrarybag);
+					//	}
+					//	await _context.SaveChangesAsync();
 
-						await transaction.CommitAsync(cancellationToken);
-						return RedirectToAction("Index");
-					}
-					catch (Exception ex)
-					{
-						await transaction.RollbackAsync(cancellationToken);
-						TempData["errorMessage"] = ex.Message;
-						return RedirectToAction("Index");
-					}
+					//	await transaction.CommitAsync(cancellationToken);
+					//	return RedirectToAction("Index");
+					//}
+					//catch (Exception ex)
+					//{
+					//	await transaction.RollbackAsync(cancellationToken);
+					//	TempData["errorMessage"] = ex.Message;
+					//	return RedirectToAction("Index");
+					//}
 
 				}
 			}
@@ -213,8 +251,8 @@ namespace BulkyBookWeb.Controllers
 
 			if (IsNotNull(userLibraryData.Author) && IsNotNull(log.Author))
 			{
-				bool IsAuthor = !userLibraryData.Author.Equals(log.Author);
-				if (IsAuthor)
+				bool isAuthor = !userLibraryData.Author.Equals(log.Author);
+				if (isAuthor)
 				{
 					detectedChanges.Add("Author", new Dictionary<string, string>
 								{
@@ -241,8 +279,8 @@ namespace BulkyBookWeb.Controllers
 
 			if (IsNotNull(userLibraryData.Name) && IsNotNull(log.Name))
 			{
-				bool IsName = !userLibraryData.Name.Equals(log.Name);
-				if (IsName)
+				bool isName = !userLibraryData.Name.Equals(log.Name);
+				if (isName)
 				{
 					detectedChanges.Add("Name", new Dictionary<string, string>
 								{
@@ -268,8 +306,8 @@ namespace BulkyBookWeb.Controllers
 			//	numChanges += 1;
 			//}
 
-			bool IsDisplayOrder = !userLibraryData.DisplayOrder.Equals(log.DisplayOrder);
-			if (IsDisplayOrder)
+			bool isDisplayOrder = !userLibraryData.DisplayOrder.Equals(log.DisplayOrder);
+			if (isDisplayOrder)
 			{
 				detectedChanges.Add("DisplayOrder", new Dictionary<string, string>
 								{
@@ -283,8 +321,8 @@ namespace BulkyBookWeb.Controllers
 
 			if (IsNotNull(userLibraryData.Genre) && IsNotNull(log.Genre))
 			{
-				bool IsGenre = !userLibraryData.Genre.Equals(log.Genre);
-				if (IsGenre)
+				bool isGenre = !userLibraryData.Genre.Equals(log.Genre);
+				if (isGenre)
 				{
 					detectedChanges.Add("Genre", new Dictionary<string, string>
 								{
@@ -311,8 +349,8 @@ namespace BulkyBookWeb.Controllers
 
 			if (IsNotNull(userLibraryData.ISBN) && IsNotNull(log.ISBN))
 			{
-				bool IsISBN = !userLibraryData.ISBN.Equals(log.ISBN);
-				if (IsISBN)
+				bool isISBN = !userLibraryData.ISBN.Equals(log.ISBN);
+				if (isISBN)
 				{
 					detectedChanges.Add("ISBN", new Dictionary<string, string>
 								{
@@ -327,8 +365,8 @@ namespace BulkyBookWeb.Controllers
 
 			if (IsNotNull(userLibraryData.Publisher) && IsNotNull(log.Publisher))
 			{
-				bool IsPublisher = !userLibraryData.Publisher.Equals(log.Publisher);
-				if (IsPublisher)
+				bool isPublisher = !userLibraryData.Publisher.Equals(log.Publisher);
+				if (isPublisher)
 				{
 					detectedChanges.Add("Publisher", new Dictionary<string, string>
 								{
