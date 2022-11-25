@@ -19,6 +19,7 @@ using System.Globalization;
 using static System.Net.WebRequestMethods;
 using CsvHelper.Configuration;
 using CsvHelper.Configuration.Attributes;
+using System.IO.Pipes;
 
 
 namespace BulkyBookWeb.Controllers
@@ -66,138 +67,91 @@ namespace BulkyBookWeb.Controllers
 				{
 					string syncRef = $"LBY-{Guid.NewGuid().ToString().ToLower().Replace("-", "")}";
 					long syncId = await CreateSyncId(syncRef, cancellationToken);
-					//DataTable data = await GetExcelTable(path, fileVM, cancellationToken);
 
 					using (FileStream stream = new(path, FileMode.Create))
 					{
 						await fileVM.File.CopyToAsync(stream, cancellationToken);
 					}
 
-					ConcurrentBag<SyncLog> syncLogBag = new ConcurrentBag<SyncLog>();
-
 					var fileStream = System.IO.File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-					using (var textReader = new StreamReader(fileStream, Encoding.UTF8))
+
+					using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken); // Track all operations
+					try
 					{
-						using (var reader = new CsvReader(textReader, CultureInfo.InvariantCulture))
+						ConcurrentBag<SyncLog> syncLogBag = new ConcurrentBag<SyncLog>();
+						ConcurrentBag<SyncLog> data = await GetExcelTable(fileExt, fileStream, syncLogBag, syncId, cancellationToken);
+						System.IO.File.Delete(path);
+
+						// Compare data btw Libraries(bag) and SyncLogs table (bag), if change is detected add it to the ChangesLog table
+						List<Library> libraryList = await _context.Libraries.ToListAsync(cancellationToken);
+
+						ConcurrentBag<Library> newLibrarybag = new ConcurrentBag<Library>();
+						ConcurrentBag<Library> updatedLibrarybag = new ConcurrentBag<Library>();
+						ConcurrentBag<ChangesLog> changesLibrarybag = new ConcurrentBag<ChangesLog>();
+
+						foreach (var log in syncLogBag)
 						{
-							var records = reader.GetRecordsAsync<LibViewModel>(cancellationToken);
-
-							await foreach (LibViewModel row in records)
+							var userLibraryData = libraryList.FirstOrDefault(x => x.UserId?.ToLower().Equals(log.UserId?.ToLower()) == true);
+							// If the userLibraryData is false means a new book is been stored otherwise check previous books
+							// for changes, when change is detected the system should flag that row of those values that changed.
+							if (null == userLibraryData) // false
 							{
-								SyncLog syncLog = new SyncLog()
+								newLibrarybag.Add(new Library
 								{
-									LibSyncId = syncId,
-									UserId = row.UserId,
-									Name = row.Name,
-									DisplayOrder = row.DisplayOrder,
-									Genre = row.Genre,
-									ISBN = row.ISBN,
-									Author = row.Author,
-									Publisher = row.Publisher,
-								};
-								syncLogBag.Add(syncLog);
+									UserId = log.UserId,
+									Name = log.Name,
+									DisplayOrder = log.DisplayOrder,
+									Genre = log.Genre,
+									ISBN = log.ISBN,
+									Author = log.Author,
+									Publisher = log.Publisher,
+									TimeCreated = DateTime.Now,
+									TimeUpdated = DateTime.Now,
+								});
 							}
+							else // true
+							{
+								var libraryChanges = GetLibraryChanges(userLibraryData, log, out int numChanges);
+
+								ChangesLog libChanges = new ChangesLog
+								{
+									Changes = JsonConvert.SerializeObject(libraryChanges),
+									refCode = syncRef,
+									RowAffected = numChanges,
+									SyncId = syncId,
+									TimeCreated = DateTime.Now,
+									TimeUpdated = DateTime.Now,
+									UserId = log.UserId,
+								};
+
+								changesLibrarybag.Add(libChanges);
+								updatedLibrarybag.Add(userLibraryData);
+
+							}
+
+						};
+						await _context.SyncLogs.AddRangeAsync(syncLogBag, cancellationToken);
+						await _context.ChangesLogs.AddRangeAsync(changesLibrarybag, cancellationToken);
+
+						if (newLibrarybag.Any())
+						{
+							await _context.Libraries.AddRangeAsync(newLibrarybag, cancellationToken);
 						}
+						if (updatedLibrarybag.Any())
+						{
+							_context.Libraries.UpdateRange(updatedLibrarybag);
+						}
+						await _context.SaveChangesAsync();
+
+						await transaction.CommitAsync(cancellationToken);
+						return RedirectToAction("Index");
 					}
-
-					System.IO.File.Delete(path);
-
-
-					//using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken); // Track all operations
-					//try
-					//{
-					//	ConcurrentBag<SyncLog> syncLogBag = new ConcurrentBag<SyncLog>();
-					//	foreach (DataRow row in data.Rows)
-					//	{
-					//		SyncLog syncLog = new SyncLog()
-					//		{
-					//			LibSyncId = syncId,
-					//			UserId = row["UserId"].ToString(),
-					//			Name = row["Name"].ToString(),
-					//			DisplayOrder = Convert.ToInt32(row["DisplayOrder"]),
-					//			Genre = row["Genre"].ToString(),
-					//			ISBN = row["ISBN"].ToString(),
-					//			Author = row["Author"].ToString(),
-					//			Publisher = row["Publisher"].ToString(),
-
-					//		};
-					//		//await _context.SyncLogs.AddAsync(libraryLog, cancellationToken);
-					//		//await _context.SaveChangesAsync(cancellationToken);
-					//		// Store syncLog as concurrentbag so we can easily compare it with the librarybag
-					//		syncLogBag.Add(syncLog);
-					//	}
-
-
-					//	// Compare data btw Libraries(bag) and SyncLogs table (bag), if change is detected add it to the ChangesLog table
-					//	List<Library> libraryList = await _context.Libraries.ToListAsync(cancellationToken);
-
-					//	ConcurrentBag<Library> newLibrarybag = new ConcurrentBag<Library>();
-					//	ConcurrentBag<Library> updatedLibrarybag = new ConcurrentBag<Library>();
-					//	ConcurrentBag<ChangesLog> changesLibrarybag = new ConcurrentBag<ChangesLog>();
-
-					//	foreach (var log in syncLogBag)
-					//	{
-					//		var userLibraryData = libraryList.FirstOrDefault(x => x.UserId?.ToLower().Equals(log.UserId?.ToLower()) == true);
-					//		// If the userLibraryData is false means a new book is been stored otherwise check previous books
-					//		// for changes, when change is detected the system should flag that row of those values that changed.
-					//		if (null == userLibraryData) // false
-					//		{
-					//			newLibrarybag.Add(new Library
-					//			{
-					//				UserId = log.UserId,
-					//				Name = log.Name,
-					//				DisplayOrder = log.DisplayOrder,
-					//				Genre = log.Genre,
-					//				ISBN = log.ISBN,
-					//				Author = log.Author,
-					//				Publisher = log.Publisher,
-					//				TimeCreated = DateTime.Now,
-					//				TimeUpdated = DateTime.Now,
-					//			});
-					//		}
-					//		else // true
-					//		{
-					//			var libraryChanges = GetLibraryChanges(userLibraryData, log, out int numChanges);
-
-					//			ChangesLog libChanges = new ChangesLog
-					//			{
-					//				Changes = JsonConvert.SerializeObject(libraryChanges),
-					//				refCode = syncRef,
-					//				RowAffected = numChanges,
-					//				SyncId = syncId,
-					//				TimeCreated = DateTime.Now,
-					//				TimeUpdated = DateTime.Now,
-					//				UserId = log.UserId,
-					//			};
-
-					//			changesLibrarybag.Add(libChanges);
-					//			updatedLibrarybag.Add(userLibraryData);
-
-					//		}
-
-					//	};
-					//	await _context.SyncLogs.AddRangeAsync(syncLogBag, cancellationToken);
-					//	await _context.ChangesLogs.AddRangeAsync(changesLibrarybag, cancellationToken);
-
-					//	if (newLibrarybag.Any())
-					//	{
-					//		await _context.Libraries.AddRangeAsync(newLibrarybag, cancellationToken);
-					//	}
-					//	if (updatedLibrarybag.Any())
-					//	{
-					//		_context.Libraries.UpdateRange(updatedLibrarybag);
-					//	}
-					//	await _context.SaveChangesAsync();
-
-					//	await transaction.CommitAsync(cancellationToken);
-					//	return RedirectToAction("Index");
-					//}
-					//catch (Exception ex)
-					//{
-					//	await transaction.RollbackAsync(cancellationToken);
-					//	TempData["errorMessage"] = ex.Message;
-					//	return RedirectToAction("Index");
-					//}
+					catch (Exception ex)
+					{
+						await transaction.RollbackAsync(cancellationToken);
+						TempData["errorMessage"] = ex.Message;
+						return RedirectToAction("Index");
+					}
 
 				}
 			}
@@ -205,30 +159,102 @@ namespace BulkyBookWeb.Controllers
 			return View(fileVM);
 		}
 
-		public async Task<DataTable> GetExcelTable(string path, DisplayBooksAndUploadFileViewModel file, CancellationToken cancellationToken)
+		public async Task<ConcurrentBag<SyncLog>> GetExcelTable(string fileExt, FileStream fileStream, ConcurrentBag<SyncLog> syncLogBag, long syncId, CancellationToken cancellationToken)
 		{
-			using (FileStream stream = new(path, FileMode.Create))
+			var xlsExt = new string[] { "xlsx", "xls" };
+			if (!xlsExt.Contains(fileExt))
 			{
-				await file.File.CopyToAsync(stream, cancellationToken);
-			}
-			var fileStream = System.IO.File.Open(path, FileMode.Open, FileAccess.Read);
-			IExcelDataReader reader = ExcelReaderFactory.CreateReader(fileStream);
-
-			using var data = reader.AsDataSet(new ExcelDataSetConfiguration()
-			{
-				UseColumnDataType = true,
-				FilterSheet = (tableReader, sheetIndex) => true,
-				ConfigureDataTable = (tableReader) => new ExcelDataTableConfiguration
+				using (var textReader = new StreamReader(fileStream, Encoding.UTF8))
 				{
-					UseHeaderRow = true,
-					FilterRow = (rowReader) => true,
-					FilterColumn = (rowReader, columnIndex) => true,
-				}
-			}).Tables[0] ?? new System.Data.DataTable(); // Return the Excel (Left side) if it is not null otherwise return the right side
-			reader.Close();
+					using (var reader = new CsvReader(textReader, CultureInfo.InvariantCulture))
+					{
+						var records = reader.GetRecordsAsync<LibViewModel>(cancellationToken);
 
-			return data;
+						await foreach (LibViewModel row in records)
+						{
+							SyncLog syncLog = new SyncLog()
+							{
+								LibSyncId = syncId,
+								UserId = row.UserId,
+								Name = row.Name,
+								DisplayOrder = row.DisplayOrder,
+								Genre = row.Genre,
+								ISBN = row.ISBN,
+								Author = row.Author,
+								Publisher = row.Publisher,
+							};
+							syncLogBag.Add(syncLog);
+						}
+					}
+				}
+				return syncLogBag;
+			}
+			else
+			{
+				IExcelDataReader reader = ExcelReaderFactory.CreateReader(fileStream);
+				using var data = reader.AsDataSet(new ExcelDataSetConfiguration()
+				{
+					UseColumnDataType = true,
+					FilterSheet = (tableReader, sheetIndex) => true,
+					ConfigureDataTable = (tableReader) => new ExcelDataTableConfiguration
+					{
+						UseHeaderRow = true,
+						FilterRow = (rowReader) => true,
+						FilterColumn = (rowReader, columnIndex) => true,
+					}
+				}).Tables[0] ?? new System.Data.DataTable(); // Return the Excel (Left side) if it is not null otherwise return the right side
+				reader.Close();
+
+				foreach (DataRow row in data.Rows)
+				{
+					SyncLog syncLog = new SyncLog()
+					{
+						LibSyncId = syncId,
+						UserId = row["UserId"].ToString(),
+						Name = row["Name"].ToString(),
+						DisplayOrder = Convert.ToInt32(row["DisplayOrder"]),
+						Genre = row["Genre"].ToString(),
+						ISBN = row["ISBN"].ToString(),
+						Author = row["Author"].ToString(),
+						Publisher = row["Publisher"].ToString(),
+
+					};
+					//await _context.SyncLogs.AddAsync(libraryLog, cancellationToken);
+					//await _context.SaveChangesAsync(cancellationToken);
+					// Store syncLog as concurrentbag so we can easily compare it with the librarybag
+					syncLogBag.Add(syncLog);
+				}
+				return syncLogBag;
+			}
 		}
+
+
+
+		//public async Task<DataTable> GetExcelTable(string path, DisplayBooksAndUploadFileViewModel file, CancellationToken cancellationToken)
+		//{
+		//	using (FileStream stream = new(path, FileMode.Create))
+		//	{
+		//		await file.File.CopyToAsync(stream, cancellationToken);
+		//	}
+		//	var fileStream = System.IO.File.Open(path, FileMode.Open, FileAccess.Read);
+		//	IExcelDataReader reader = ExcelReaderFactory.CreateReader(fileStream);
+
+		//	using var data = reader.AsDataSet(new ExcelDataSetConfiguration()
+		//	{
+		//		UseColumnDataType = true,
+		//		FilterSheet = (tableReader, sheetIndex) => true,
+		//		ConfigureDataTable = (tableReader) => new ExcelDataTableConfiguration
+		//		{
+		//			UseHeaderRow = true,
+		//			FilterRow = (rowReader) => true,
+		//			FilterColumn = (rowReader, columnIndex) => true,
+		//		}
+		//	}).Tables[0] ?? new System.Data.DataTable(); // Return the Excel (Left side) if it is not null otherwise return the right side
+		//	reader.Close();
+
+		//	return data;
+		//}
+
 
 		public async Task<long> CreateSyncId(string syncRef, CancellationToken cancellationToken = default)
 		{
