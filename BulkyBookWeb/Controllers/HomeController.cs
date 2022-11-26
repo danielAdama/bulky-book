@@ -40,6 +40,7 @@ namespace BulkyBookWeb.Controllers
 			//return View(libraryList);
 
 			bookVM.GetLibraries = await _context.Libraries.AsNoTracking().ToListAsync();
+			TempData["lastSyncDate"] = await GetLastSyncDate();
 			return View(bookVM);
 		}
 		[HttpPost]
@@ -159,6 +160,17 @@ namespace BulkyBookWeb.Controllers
 			return View(fileVM);
 		}
 
+		public async Task<IActionResult> DisplayChanges()
+		{
+			IEnumerable<ChangesLog> changesLog = await _context.ChangesLogs.AsNoTracking().ToListAsync();
+			return View(changesLog);
+		}
+
+		public IActionResult Privacy()
+		{
+			return View();
+		}
+
 		public async Task<ConcurrentBag<SyncLog>> GetExcelTable(string fileExt, FileStream fileStream, ConcurrentBag<SyncLog> syncLogBag, long syncId, CancellationToken cancellationToken)
 		{
 			var xlsExt = new string[] { "xlsx", "xls" };
@@ -254,6 +266,17 @@ namespace BulkyBookWeb.Controllers
 
 		//	return data;
 		//}
+
+		public async Task<string> GetLastSyncDate()
+		{
+			//var lastSyncDate = await _context.Syncs.AsNoTracking().OrderByDescending(x => x.TimeCreated).Select(p => p.TimeCreated).FirstAsync();
+			var lastSyncDate = await _context.Syncs.AsNoTracking().OrderByDescending(x => x.TimeCreated)
+				.Select(p => p.TimeCreated)
+				.FirstOrDefaultAsync();
+
+			return lastSyncDate.Day == 1 && lastSyncDate.Month == 1 && lastSyncDate.Year == 1 
+				? "Nil" : lastSyncDate.ToString("dd/M/yyyy HH:mm:ss", CultureInfo.InvariantCulture);
+		}
 
 
 		public async Task<long> CreateSyncId(string syncRef, CancellationToken cancellationToken = default)
@@ -420,10 +443,6 @@ namespace BulkyBookWeb.Controllers
 			return detectedChanges;
 		}
 
-		public IActionResult Privacy()
-		{
-			return View();
-		}
 
 		[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
 		public IActionResult Error()
