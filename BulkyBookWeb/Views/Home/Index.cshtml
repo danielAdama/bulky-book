@@ -7,12 +7,11 @@
 
 
 <div class="up">
-	@*<h1 class="text-center text-white bg-warning p-0">@TempData["ErrorMessage"] @TempData["invalidFile"] </h1>*@
 	@if (TempData["InvalidFile"] != null)
 	{
 		<h1 class="text-center text-white bg-warning p-0"> @TempData["InvalidFile"] </h1>
 	}
-	<h1 class="text-center text-white bg-success p-0">@TempData["ValidFile"]</h1>
+	<h1 class="text-center text-white bg-success p-0">@TempData["ValidFile"] @TempData["errorMessage"]</h1>
 	<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
 		<div class="modal-dialog">
 			<div class="modal-content">
@@ -35,7 +34,7 @@
 </div>
 <div class="card shadow border-0 mb-7">
 	<div class="row align-items-center p-3 m-2">
-		@*<span class="text-muted text-sm float-lg-end">Last Sync Date @TempData["LastSyncDate"]</span>*@
+		<span class="text-muted text-sm float-lg-end">Last Sync Date @TempData["lastSyncDate"]</span>
 		<div class="col-12 mb-4 mb-sm-0 d-flex justify-content-between">
 			<div class="col-6 text-start">
 				<h1 class="text-primary">Book Library</h1>
@@ -45,10 +44,10 @@
 					<i class="bi bi-cloud-upload"></i>
 					<span class="mx-1">Upload File</span>
 				</button>
-				@*<a type="button" class="btn btn-sm btn-outline-secondary text-black" asp-action="EIDChanges" asp-controller="Nominal">
+				<a type="button" class="btn btn-primary" asp-action="DisplayChanges" asp-controller="Home">
 					<i class="bi bi-clock-history"></i>
 					<span class="mx-1">Sync History</span>
-				</a>*@
+				</a>
 			</div>
 		</div>
 	</div>
@@ -59,29 +58,32 @@
 	<table class="table table-bordered table-striped" style="width:100%">
 		<thead>
 			<tr>
-				<th>
-					ID
+				<th scope="col">
+					S/N
 				</th>
-				<th>
+				<th scope="col">
+					UID
+				</th>
+				<th scope="col">
 					Category Name
 				</th>
-				<th>
+				<th scope="col">
 					Display Order
 				</th>
-				<th>
+				<th scope="col">
 					Genre
 				</th>
-				<th>
+				<th scope="col">
 					ISBN
 				</th>
-				<th>
+				<th scope="col">
 					Author
 				</th>
-				<th>
+				<th scope="col">
 					Publisher
 				</th>
-				<th>
-					Date and Time
+				<th scope="col">
+					Date Updated
 				</th>
 			</tr>
 		</thead>
@@ -91,6 +93,9 @@
 				@foreach (Library obj in Model.GetLibraries)
 				{
 					<tr>
+						<td with=5%>
+							@obj.Id
+						</td>
 						<td with=5%>
 							@obj.UserId
 						</td>
@@ -113,7 +118,7 @@
 							@obj.Publisher
 						</td>
 						<td with=5%>
-							@obj.DateTimeNow
+							@obj.TimeUpdated
 						</td>
 					</tr>
 				}
