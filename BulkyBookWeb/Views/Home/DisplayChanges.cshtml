@@ -1,0 +1,52 @@
+﻿@model IEnumerable<BulkyBookWeb.Models.ChangesLog>
+
+@{
+    ViewData["Title"] = "SyncHistory";
+}
+
+<table class="table table-bordered table-striped" style="width:100%">
+	<thead>
+		<tr>
+			<th scope="col">
+				S/N
+			</th>
+			<th scope="col">
+				UID
+			</th>
+			<th scope="col">
+				RefId
+			</th>
+			<th scope="col">
+				Changes
+			</th>
+			<th scope="col">
+				Rows Affected
+			</th>
+		</tr>
+	</thead>
+	<tbody>
+		@if (Model != null)
+		{
+			@foreach (ChangesLog obj in Model)
+			{
+				<tr>
+					<td with=5%>
+						@obj.SyncId
+					</td>
+					<td with=5%>
+						@obj.UserId
+					</td>
+					<td with=5%>
+						@obj.refCode
+					</td>
+					<td with=5%>
+						@obj.Changes
+					</td>
+					<td with=5%>
+						@obj.RowAffected
+					</td>
+				</tr>
+			}
+		}
+	</tbody>
+</table>
